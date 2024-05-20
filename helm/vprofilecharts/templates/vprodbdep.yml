@@ -16,17 +16,34 @@ spec:
     spec:
       containers:
       - name: vprodb
-        image: vprofile/vprofiledb
+        image: arbazm10/vprofiledb:latest
+          #args:
+          #- "--ignore-db-dir"
+          #- "lost+found"
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: volume
         ports:
         - name: vprodb-port
           containerPort: 3306
-        env: 
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+          limits:
+            memory: "500Mi"
+            cpu: "200m"
+        env:
          - name: MYSQL_ROOT_PASSWORD
            valueFrom:
              secretKeyRef:
                name: app-secret
                key: db-pass
-#        env:
-#         - name: MYSQL_ROOT_PASSWORD
-#           value: "vprodbpass"
+      nodeSelector:
+        zone: centralus
+      volumes:
+        - name: volume
+          persistentVolumeClaim:
+            claimName: myakspvc2
+
 
