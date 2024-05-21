@@ -4,7 +4,7 @@ pipeline{
     environment {
         registry = "arbazm10/vprofileapparbaz"
         registryCredential = "dockerhub"
-        JAVA_HOME = tool name: 'JDK-11', type: 'JDK'
+        JAVA_HOME = tool name: 'JDK-17', type: 'JDK'
         PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
 
     }
@@ -12,7 +12,7 @@ pipeline{
         stage('Print Available JDKs') {
             steps {
                 script {
-                    def jdks = tool(name: 'JDK-11', type: 'JDK')
+                    def jdks = tool(name: 'JDK-17', type: 'JDK')
                     echo "Available JDKs: ${jdks}"
                     sh 'echo $JAVA_HOME'
                     sh 'echo $PATH'
