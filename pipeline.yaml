@@ -1,0 +1,121 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  registry: 'arbazm10/vprofileapparbaz'
+  registryCredential: 'dockerhub'
+  JAVA_HOME: '/usr/lib/jvm/java-17-openjdk-amd64' # Update with the path to your Java installation
+  PATH: '$(JAVA_HOME)/bin:$(PATH)'
+
+stages:
+- stage: PrintAvailableJDKs
+  jobs:
+  - job: PrintJDKs
+    steps:
+    - script: |
+        echo "Available JDKs: $(JAVA_HOME)"
+        echo $(JAVA_HOME)
+        echo $(PATH)
+      displayName: 'Print Available JDKs'
+
+- stage: Build
+  jobs:
+  - job: Build
+    steps:
+    - script: |
+        mvn clean install -DskipTests
+      displayName: 'Build'
+    - publish: '**/target/*.war'
+      artifact: warFiles
+      condition: succeeded()
+
+- stage: UnitTest
+  jobs:
+  - job: UnitTest
+    steps:
+    - script: |
+        mvn test
+      displayName: 'Run Unit Tests'
+
+- stage: IntegrationTest
+  jobs:
+  - job: IntegrationTest
+    steps:
+    - script: |
+        mvn verify -DskipUnitTests
+      displayName: 'Run Integration Tests'
+
+- stage: CodeAnalysisWithCheckstyle
+  jobs:
+  - job: Checkstyle
+    steps:
+    - script: |
+        mvn checkstyle:checkstyle
+      displayName: 'Run Checkstyle'
+    - script: |
+        echo 'Generated Analysis Result'
+      condition: succeeded()
+
+- stage: CodeAnalysisWithSonarQube
+  jobs:
+  - job: SonarQubeAnalysis
+    steps:
+    - task: SonarQubePrepare@5
+      inputs:
+        SonarQube: 'sonar-pro'
+        projectKey: 'vprofile'
+        projectName: 'vprofile-repo'
+        projectVersion: '1.0'
+        extraProperties: |
+          sonar.sources=src
+          sonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/
+          sonar.junit.reportsPath=target/surefire-reports/
+          sonar.jacoco.reportsPath=target/jacoco.exec
+          sonar.java.checkstyle.reportPaths=target/checkstyle-result.xml
+    - task: SonarQubeAnalyze@5
+    - task: SonarQubePublish@5
+      inputs:
+        pollingTimeoutSec: '600'
+      condition: always()
+
+- stage: BuildAppImage
+  jobs:
+  - job: BuildDockerImage
+    steps:
+    - script: |
+        docker build -t $(registry):V$(Build.BuildId) .
+      displayName: 'Build Docker Image'
+
+- stage: UploadImage
+  jobs:
+  - job: UploadDockerImage
+    steps:
+    - script: |
+        echo $(DOCKERHUB_PASSWORD) | docker login -u $(DOCKERHUB_USERNAME) --password-stdin
+        docker push $(registry):V$(Build.BuildId)
+        docker push $(registry):latest
+      displayName: 'Push Docker Image'
+      env:
+        DOCKERHUB_USERNAME: $(registryCredential)
+        DOCKERHUB_PASSWORD: $(dockerhubPassword) # Set this as a secret variable in Azure DevOps pipeline
+
+- stage: RemoveUnusedDockerImage
+  jobs:
+  - job: RemoveDockerImage
+    steps:
+    - script: |
+        docker rmi $(registry):V$(Build.BuildId)
+      displayName: 'Remove Unused Docker Image'
+
+- stage: KubernetesDeploy
+  jobs:
+  - job: DeployToKubernetes
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=$(registry):V$(Build.BuildId) --namespace prod
+      displayName: 'Deploy to Kubernetes'
