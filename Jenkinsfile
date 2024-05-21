@@ -82,12 +82,15 @@ pipeline{
                 sh "docker rmi $registry:V$BUILD_NUMBER"
             }
         }
-        stage('Kuberetes Deploy') {
-            agent {label 'AKS1'} {
-                steps {
-                    sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
-                }
+        stage('Kubernetes Deploy') {
+            agent {
+                label 'AKS1'
             }
+            
+            steps {
+                sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
+                }
+            
         }
     }
 
