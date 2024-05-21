@@ -9,7 +9,16 @@ pipeline{
 
     }
     stages {
-
+        stage('Print Available JDKs') {
+            steps {
+                script {
+                    def jdks = tool(name: 'jdk-17', type: 'JDK')
+                    echo "Available JDKs: ${jdks}"
+                    sh 'echo $JAVA_HOME'
+                    sh 'echo $PATH'
+                }
+            }
+        }
         stage('BUILD') {
             steps {
                 sh 'mvn clean install -DskipTests'
