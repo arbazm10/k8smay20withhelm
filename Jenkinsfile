@@ -4,7 +4,7 @@ pipeline{
     environment {
         registry = "arbazm10/vprofileapparbaz"
         registryCredential = "dockerhub"
-        JAVA_HOME = tool name: 'jdk-17', type: 'JDK'
+        JAVA_HOME = tool name: 'JDK', type: 'JDK'
         PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
 
     }
