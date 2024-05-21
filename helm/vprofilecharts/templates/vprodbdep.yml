@@ -44,6 +44,6 @@ spec:
       volumes:
         - name: volume
           persistentVolumeClaim:
-            claimName: myakspvc2
+            claimName: myakspvc3
 
 
